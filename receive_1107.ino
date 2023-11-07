@@ -13,14 +13,6 @@
 #define ADDRESS 0xF0F0F0E1LL
 
 RF24 radio(CEPIN, CSNPIN); // CE, CSN 핀 설정
-//const byte address[6] = "00001";
-
-
-//상태를 변경하는 간격들을 나타내는 변수들, 함수들 안에서 선언될 예정.(ms 단위로 작성하도록)
-//const unsigned long led_interval = 1000;
-//const unsigned long speaker_interval = 1000;
-//const unsigned long nRF_interval = 1000;
-
 
 //화재 감지기로부터 화재 감지 여부를 전달받는 함수
 bool RECEIVE_ALERT(float RECEIVE_FREQ){
@@ -40,43 +32,38 @@ void SPEAKER(float DELAY_MILIS_SPEAKER, bool ARAM_SWITCH, bool ISTEST = true){
   #define ALERT_LEVEL 255
   #define ARAM_OUTPUT_PIN 5
 
-  //주의: delay() 함수를 사용하는 것은 재고해 볼 필요가 있음.
-  /*if(ISTEST == true){
-    do{
-      analogWrite(ARAM_OUTPUT_PIN, TEST_LEVEL);
-      delay(DELAY_MILIS_SPEAKER);
-      analogWrite(ARAM_OUTPUT_PIN, LOW_LEVEL);
-      delay(DELAY_MILIS_SPEAKER);
-    }while((ARAM_SWITCH == false));}
-  else{
-    do{
-      analogWrite(ARAM_OUTPUT_PIN, TEST_LEVEL);
-      delay(DELAY_MILIS_SPEAKER);
-      analogWrite(ARAM_OUTPUT_PIN, LOW_LEVEL);
-      delay(DELAY_MILIS_SPEAKER);
-    }while(ARAM_SWITCH == false);}*/
+  static unsigned long previousMillis = 0;
+  static int speakerState = LOW_LEVEL;
+  const unsigned long delayMillis = DELAY_MILIS_SPEAKER;
+
+  unsigned long currentMillis = millis();
+
+  if (ISTEST && ARAM_SWITCH) { // ISTEST가 true이고 ARAM_SWITCH가 true인 경우에만 동작
+    if (currentMillis - previousMillis >= delayMillis) {
+      previousMillis = currentMillis;
+      if (speakerState == LOW_LEVEL) {
+        speakerState = TEST_LEVEL;
+      } else {
+        speakerState = LOW_LEVEL;
+      }
+      analogWrite(ARAM_OUTPUT_PIN, speakerState);
+    }
+  }
 }
 
+
 //소화기 받침대의 LED를 작동하는 함수
-void BLINK_LED(float BLINK_FREQ, long DELAY_MILIS_LED, bool LED_SWITCH){
+void BLINK_LED(long DELAY_MILIS_LED, bool LED_SWITCH){
   #define LED_OUTPUT_PIN 6
 
   const unsigned long led_interval = DELAY_MILIS_LED;
   static long prev_milis = 0;
   const unsigned long curr_milis = millis();
-
+  if(LED_SWITCH == true){
     if ((curr_milis - prev_milis >= led_interval)) {
     prev_milis = curr_milis;
-    digitalWrite(LED_OUTPUT_PIN, !digitalRead(LED_OUTPUT_PIN));}
-
-  //주의: delay() 함수를 사용하는 것은 재고해 볼 필요가 있음.
-  /*do{
-    digitalWrite(LED_OUTPUT_PIN, HIGH);
-    delay(DELAY_MILIS_LED);
-    digitalWrite(LED_OUTPUT_PIN, LOW);
-    delay(DELAY_MILIS_LED);
-  }while(LED_SWITCH == false);    */
-}
+    digitalWrite(LED_OUTPUT_PIN, !digitalRead(LED_OUTPUT_PIN));}}
+  else{}}
 
 void setup(){
   Serial.begin(9600);
@@ -85,7 +72,13 @@ void setup(){
   radio.setPALevel(RF24_PA_MIN);
   //모듈을 수신기 상태로 설정한다.
   radio.startListening(); 
+
+  pinMode(ARAM_OUTPUT_PIN, OUTPUT);
+  pinMode(LED_OUTPUT_PIN, OUTPUT);
 }
 
 void loop(){
+  BLINK_LED(1000, true);
+  SPEAKER(500, true);
+
 }
